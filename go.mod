@@ -1,4 +1,4 @@
-module transport
+module github.com/rabbit-proxy/transport
 
 go 1.17
 
