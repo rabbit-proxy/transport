@@ -22,6 +22,14 @@ type AesEncryption struct {
 	decryptSteam cipher.Stream
 }
 
+func NewAesEncryption(mode string, commonIV []byte, encryptKey string) *AesEncryption {
+	return &AesEncryption{
+		cryptMode:  mode,
+		commonIV:   commonIV,
+		encryptKey: encryptKey,
+	}
+}
+
 func (cryptMode *AesEncryption) getAESCipher() cipher.Block {
 	if cryptMode.key == nil {
 		hash := sha256.New()
