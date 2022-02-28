@@ -11,7 +11,7 @@ func init() {
 }
 
 const (
-	defaultBufferLength = 64 * 1024
+	DefaultBufferLength = 8 * 1024
 )
 
 var (
@@ -20,7 +20,7 @@ var (
 	bufferPool   = sync.Pool{
 		New: func() interface{} {
 			if bufferLength == 0 {
-				return make([]byte, defaultBufferLength)
+				return make([]byte, DefaultBufferLength)
 			}
 			return make([]byte, bufferLength)
 		}}
@@ -38,10 +38,10 @@ func InitBufferLength(num int) {
 	bufferLength = num
 }
 
-func getBuffer() []byte {
+func GetBuffer() []byte {
 	return bufferPool.Get().([]byte)
 }
 
-func putBuffer(buffer []byte) {
+func PutBuffer(buffer []byte) {
 	bufferPool.Put(buffer)
 }

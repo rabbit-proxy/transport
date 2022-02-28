@@ -72,8 +72,8 @@ func (cryptMode *AesEncryption) Encrypt(plainText []byte) {
 		cryptMode.encryptSteam = cryptMode.getEnc()
 	}
 
-	cipherText := getBuffer()
-	defer putBuffer(cipherText)
+	cipherText := GetBuffer()
+	defer PutBuffer(cipherText)
 
 	cryptMode.encryptSteam.XORKeyStream(cipherText, plainText)
 	copy(plainText, cipherText)
@@ -85,8 +85,8 @@ func (cryptMode *AesEncryption) Decrypt(cipherText []byte) {
 		cryptMode.decryptSteam = cryptMode.getDec()
 	}
 
-	plaintext := getBuffer()
-	defer putBuffer(plaintext)
+	plaintext := GetBuffer()
+	defer PutBuffer(plaintext)
 
 	cryptMode.decryptSteam.XORKeyStream(plaintext, cipherText)
 	copy(cipherText, plaintext)
