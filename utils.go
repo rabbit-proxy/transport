@@ -14,8 +14,8 @@ func init() {
 }
 
 const (
-	BufferLength = 8 * 1024
-	BufferLimit  = BufferLength - 512	// 保留一部分用作 header
+	BufferLength = 16 * 1024
+	BufferLimit  = 12 * 1024 // 保留一部分用作 header
 )
 
 var (

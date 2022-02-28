@@ -17,7 +17,6 @@ type AesEncryption struct {
 	cryptMode    string
 	commonIV     []byte
 	encryptKey   string
-	key          []byte
 	encryptSteam cipher.Stream
 	decryptSteam cipher.Stream
 }
@@ -27,51 +26,44 @@ func NewAesEncryption(mode string, commonIV []byte, encryptKey string) *AesEncry
 		cryptMode:  mode,
 		commonIV:   commonIV,
 		encryptKey: encryptKey,
+		encryptSteam: getEnc(getAESCipher(encryptKey, mode), commonIV),
+		decryptSteam: getDec(getAESCipher(encryptKey, mode), commonIV),
 	}
 }
 
-func (cryptMode *AesEncryption) getAESCipher() cipher.Block {
-	if cryptMode.key == nil {
-		hash := sha256.New()
-		hash.Write([]byte(cryptMode.encryptKey))
-		hashedKey := hash.Sum(nil)
+func getAESCipher(encryptKey string, encryptMode string) cipher.Block {
+	hash := sha256.New()
+	hash.Write([]byte(encryptKey))
+	hashedKey := hash.Sum(nil)
 
-		switch cryptMode.cryptMode {
-		case "aes128":
-			cryptMode.key = hashedKey[:16]
-		case "aes192":
-			cryptMode.key = hashedKey[:24]
-		case "aes256":
-			cryptMode.key = hashedKey[:32]
-		}
+	var key []byte
+	switch encryptMode {
+	case "aes128":
+		key = hashedKey[:16]
+	case "aes192":
+		key = hashedKey[:24]
+	case "aes256":
+		key = hashedKey[:32]
 	}
 
-	aesCipher, err := aes.NewCipher(cryptMode.key)
+	aesCipher, err := aes.NewCipher(key)
 	if err != nil {
 		zap.L().Panic("get aesCipher failed", zap.Error(err))
 	}
-
 	return aesCipher
 }
 
-func (cryptMode *AesEncryption) getEnc() cipher.Stream {
-	aesCipher := cryptMode.getAESCipher()
-	cfbEnc := cipher.NewCFBEncrypter(aesCipher, cryptMode.commonIV)
+func  getEnc(aesCipher cipher.Block, commonIV []byte) cipher.Stream {
+	cfbEnc := cipher.NewCFBEncrypter(aesCipher, commonIV)
 	return cfbEnc
 }
 
-func (cryptMode *AesEncryption) getDec() cipher.Stream {
-	aesCipher := cryptMode.getAESCipher()
-	cfbDec := cipher.NewCFBDecrypter(aesCipher, cryptMode.commonIV)
-	return cfbDec
+func  getDec(aesCipher cipher.Block, commonIV []byte) cipher.Stream {
+	cfbEnc := cipher.NewCFBDecrypter(aesCipher, commonIV)
+	return cfbEnc
 }
 
 func (cryptMode *AesEncryption) Encrypt(plainText []byte) {
-
-	if cryptMode.encryptSteam == nil { // todo 这个地方可能不是并发安全的
-		cryptMode.encryptSteam = cryptMode.getEnc()
-	}
-
 	cipherText := GetBuffer()
 	defer PutBuffer(cipherText)
 
@@ -80,11 +72,6 @@ func (cryptMode *AesEncryption) Encrypt(plainText []byte) {
 }
 
 func (cryptMode *AesEncryption) Decrypt(cipherText []byte) {
-
-	if cryptMode.decryptSteam == nil {
-		cryptMode.decryptSteam = cryptMode.getDec()
-	}
-
 	plaintext := GetBuffer()
 	defer PutBuffer(plaintext)
 
