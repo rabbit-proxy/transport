@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"github.com/Jack-Kingdom/go-dsa/buffer"
 	"math/rand"
 	"sync"
 	"time"
@@ -12,7 +13,7 @@ func init() {
 
 const (
 	BufferLength = 16 * 1024
-	BufferLimit  = 15 * 1024 // 保留一部分用作 header
+	DataLimit    = 15 * 1024 // 保留一部分用作 下层协议传输的 header
 )
 
 var (
@@ -30,7 +31,7 @@ func getRandomBytes() byte {
 }
 
 func GetBuffer() []byte {
-	return bufferPool.Get().([]byte)
+	return buffer.Get(BufferLength)
 }
 
 func PutBuffer(buffer []byte) {

@@ -1,13 +1,12 @@
 package transport
 
 import (
-	"go-rabbit-client/common/utils"
 	"testing"
 )
 
 func TestAuthType_Marshal(t *testing.T) {
-	buffer := utils.GetBuffer()
-	defer utils.PutBuffer(buffer)
+	buffer := GetBuffer()
+	defer PutBuffer(buffer)
 
 	auth := AuthType{
 		AccessToken: "helloworldJack",
@@ -15,40 +14,45 @@ func TestAuthType_Marshal(t *testing.T) {
 
 	_, err := auth.Marshal(buffer)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	cmp := AuthType{}
 	_, err = cmp.UnMarshal(buffer)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	if cmp!=auth {
-		t.Error("unmarshal not equal")
+		t.Fatal("unmarshal not equal")
 	}
 }
 
-func TestConnectType_Marshal(t *testing.T) {
-	buffer := utils.GetBuffer()
-	defer utils.PutBuffer(buffer)
 
-	connect := ConnectType{
+func TestConnectType_Marshal(t *testing.T) {
+	buffer := GetBuffer()
+	defer PutBuffer(buffer)
+
+	origin := ConnectType{
+		ProtocolType: TransProtocolTypeTcp,
 		AddressType: AddressEnumTypeDomain,
 		Host:        "qiaohong.org",
 		Port:        443,
 	}
 
-	_, err := connect.Marshal(buffer)
+	n, err := origin.Marshal(buffer)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	t.Logf("used length:%d, buffer:%v", n, buffer[:n])
+
 	cmp := ConnectType{}
-	_, err = cmp.UnMarshal(buffer)
+	n, err = cmp.UnMarshal(buffer)
+
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
-	if cmp!=connect {
-		t.Error("unmarshal not equal")
+	if cmp!= origin {
+		t.Fatalf("unmarshal not equal，origin:%v, cmp:%v", origin, cmp)
 	}
 }
