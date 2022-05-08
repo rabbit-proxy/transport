@@ -58,16 +58,27 @@ type AddressEnumType byte
 type TransProtocolType byte // 用于描述传输层的协议类型
 
 const (
-	AddressEnumTypeIpv4 = 0x01 + iota
+	AddressEnumTypeIpv4 AddressEnumType = 0x01 + iota
 	AddressEnumTypeIpv6
 	AddressEnumTypeDomain
 	AddressEnumTypeUnknown
 )
 
 const (
-	TransProtocolTypeTcp = 0x01 + iota
+	TransProtocolTypeTcp TransProtocolType = 0x01 + iota
 	TransProtocolTypeUdp
 )
+
+func (proto TransProtocolType) String() string {
+	switch proto {
+	case TransProtocolTypeTcp:
+		return "tcp"
+	case TransProtocolTypeUdp:
+		return "udp"
+	default:
+		return "unknown"
+	}
+}
 
 const (
 	TransProtocolTypeLength = 1
