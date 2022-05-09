@@ -3,14 +3,8 @@ package transport
 import (
 	"github.com/gorilla/websocket"
 	"net"
+	"time"
 )
-
-// Socket 基础的连接接口
-type Socket interface {
-	Write(data []byte) (int, error)
-	Read(data []byte) (int, error)
-	Close() error
-}
 
 // TCPSocketType 基于 tcp 的传输方式
 type TCPSocketType struct {
@@ -34,6 +28,26 @@ func (socket *TCPSocketType) Read(data []byte) (int, error) {
 
 func (socket *TCPSocketType) Close() error {
 	return socket.Conn.Close()
+}
+
+func (socket *TCPSocketType) LocalAddr() net.Addr {
+	return socket.Conn.LocalAddr()
+}
+
+func (socket *TCPSocketType) RemoteAddr() net.Addr {
+	return socket.Conn.RemoteAddr()
+}
+
+func (socket *TCPSocketType) SetDeadline(t time.Time) error {
+	return socket.Conn.SetDeadline(t)
+}
+
+func (socket *TCPSocketType) SetReadDeadline(t time.Time) error {
+	return socket.Conn.SetReadDeadline(t)
+}
+
+func (socket *TCPSocketType) SetWriteDeadline(t time.Time) error {
+	return socket.Conn.SetWriteDeadline(t)
 }
 
 // WSType 基于 websocket 的传输方式
@@ -60,4 +74,28 @@ func (socket *WSType) Read(data []byte) (int, error) {
 
 func (socket *WSType) Close() error {
 	return socket.Conn.Close()
+}
+
+func (socket *WSType) LocalAddr() net.Addr {
+	return socket.Conn.LocalAddr()
+}
+
+func (socket *WSType) RemoteAddr() net.Addr {
+	return socket.Conn.RemoteAddr()
+}
+
+func (socket *WSType) SetDeadline(t time.Time) error {
+	err := socket.Conn.SetReadDeadline(t)
+	if err != nil {
+		return err
+	}
+	return socket.Conn.SetWriteDeadline(t)
+}
+
+func (socket *WSType) SetReadDeadline(t time.Time) error {
+	return socket.Conn.SetReadDeadline(t)
+}
+
+func (socket *WSType) SetWriteDeadline(t time.Time) error {
+	return socket.Conn.SetWriteDeadline(t)
 }
