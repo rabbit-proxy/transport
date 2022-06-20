@@ -6,52 +6,85 @@ import (
 	"net"
 )
 
+var (
+	ErrBufferLengthLimit = errors.New("marshal AuthType buffer length limited")
+)
+
 type SerializableType interface {
 	Marshal(buffer []byte) (int, error)
 	UnMarshal(buffer []byte) (int, error)
 }
 
 const (
-	RandomByteLength            = 1
-	AccessTokenLengthByteLength = 1
+	randomByteLength            = 1
+	accessTokenLengthByteLength = 1
+	functionTagLength           = 1
 )
 
-var (
-	BufferLengthLimitErr = errors.New("marshal AuthType buffer length limited")
+type functionFlagType uint8
+const (
+	FunctionTagMux functionFlagType = 0x01 << iota
 )
 
 type AuthType struct {
-	AccessToken  string
-	FunctionFlag byte // 功能位，用于标记是否是否启动一定功能	# todo 目前没有使用
+	Token    string
+	FuncFlag functionFlagType // 功能位，用于标记是否是否启动一定功能
 }
 
-func (data *AuthType) Marshal(buffer []byte) (int, error) {
-	lengthNeed := RandomByteLength + AccessTokenLengthByteLength + len(data.AccessToken)
+func (auth *AuthType) SetFuncTag(flag functionFlagType, enabled bool) {
+	if enabled {
+		auth.FuncFlag |= flag
+	} else {
+		auth.FuncFlag &= ^flag
+	}
+}
+
+func (auth *AuthType) IsFuncEnabled(flag functionFlagType) bool {
+	return (auth.FuncFlag & flag) > 0
+}
+
+func (auth *AuthType) Marshal(buffer []byte) (int, error) {
+	lengthNeed := randomByteLength + accessTokenLengthByteLength + len(auth.Token) + functionTagLength
 	if len(buffer) < lengthNeed {
-		return 0, BufferLengthLimitErr
+		return 0, ErrBufferLengthLimit
 	}
 
-	buffer[0] = getRandomBytes()
+	used := 0
 
-	buffer[RandomByteLength] = byte(len(data.AccessToken))
+	buffer[used] = getRandomBytes()
+	used += randomByteLength
 
-	copy(buffer[RandomByteLength+AccessTokenLengthByteLength:], data.AccessToken)
+	buffer[used] = byte(len(auth.Token))
+	used += accessTokenLengthByteLength
+
+	tokenLength := len(auth.Token)
+	copy(buffer[used:used+tokenLength], auth.Token)
+	used += tokenLength
+
+	buffer[used] = byte(auth.FuncFlag)
+	used += functionTagLength
+
 	return lengthNeed, nil
 }
 
-func (data *AuthType) UnMarshal(buffer []byte) (int, error) {
-	minLengthNeed := RandomByteLength + AccessTokenLengthByteLength // 这里先忽略 AccessToken 长度
+func (auth *AuthType) UnMarshal(buffer []byte) (int, error) {
+	minLengthNeed := randomByteLength + accessTokenLengthByteLength // 这里先忽略 Token 长度
 	if len(buffer) < minLengthNeed {
-		return 0, BufferLengthLimitErr
+		return 0, ErrBufferLengthLimit
 	}
 
-	tokenLen := int(buffer[RandomByteLength])
-	if len(buffer) < (minLengthNeed + tokenLen) {
-		return 0, BufferLengthLimitErr
+	tokenLen := int(buffer[randomByteLength])
+	if len(buffer) < (minLengthNeed + tokenLen + functionTagLength) {
+		return 0, ErrBufferLengthLimit
 	}
+	used := 2
+	auth.Token = string(buffer[used : used+tokenLen])
+	used += tokenLen
 
-	data.AccessToken = string(buffer[minLengthNeed : minLengthNeed+tokenLen])
-	return minLengthNeed + tokenLen, nil
+	auth.FuncFlag = functionFlagType(buffer[used])
+	used += functionTagLength
+
+	return used, nil
 }
 
 type AddressEnumType byte
@@ -81,12 +114,12 @@ func (proto TransProtocolType) String() string {
 }
 
 const (
-	TransProtocolTypeLength = 1
-	AddressTypeByteLength   = 1
-	AddressIpv4Length       = 4
-	AddressIpv6Length       = 16
-	AddressDomainLength     = 1
-	PortLength              = 2
+	transProtocolTypeLength = 1
+	addressTypeByteLength = 1
+	addressIpv4Length   = 4
+	addressIpv6Length   = 16
+	addressDomainLength = 1
+	portLength          = 2
 )
 
 var (
@@ -107,11 +140,11 @@ func (data *ConnectType) Marshal(buffer []byte) (int, error) {
 		return 0, TransProtocolIllegalErr
 	}
 
-	if len(buffer) < (TransProtocolTypeLength) {
-		return 0, BufferLengthLimitErr
+	if len(buffer) < (transProtocolTypeLength) {
+		return 0, ErrBufferLengthLimit
 	}
 	buffer[0] = byte(data.ProtocolType)
-	lengthUsed := TransProtocolTypeLength
+	lengthUsed := transProtocolTypeLength
 
 	if checkTransProtocolType(data.ProtocolType) == false {
 		return 0, TransProtocolIllegalErr
@@ -119,50 +152,50 @@ func (data *ConnectType) Marshal(buffer []byte) (int, error) {
 
 	switch data.AddressType {
 	case AddressEnumTypeIpv4:
-		lengthNeed := TransProtocolTypeLength + AddressTypeByteLength + AddressIpv4Length + PortLength
+		lengthNeed := transProtocolTypeLength + addressTypeByteLength + addressIpv4Length + portLength
 		if len(buffer) < lengthNeed {
-			return 0, BufferLengthLimitErr
+			return 0, ErrBufferLengthLimit
 		}
 
 		buffer[lengthUsed] = byte(data.AddressType)
-		lengthUsed += AddressTypeByteLength
+		lengthUsed += addressTypeByteLength
 
-		if len(data.Host) < AddressIpv4Length {
+		if len(data.Host) < addressIpv4Length {
 			return 0, HostLengthLimitedErr
 		}
-		copy(buffer[lengthUsed:lengthUsed+AddressIpv4Length], net.ParseIP(data.Host).To4()[:AddressIpv4Length])
-		lengthUsed += AddressIpv4Length
+		copy(buffer[lengthUsed:lengthUsed+addressIpv4Length], net.ParseIP(data.Host).To4()[:addressIpv4Length])
+		lengthUsed += addressIpv4Length
 
 		binary.BigEndian.PutUint16(buffer[lengthUsed:], data.Port)
 		return lengthNeed, nil
 	case AddressEnumTypeIpv6:
-		lengthNeed := TransProtocolTypeLength + AddressTypeByteLength + AddressIpv6Length + PortLength
+		lengthNeed := transProtocolTypeLength + addressTypeByteLength + addressIpv6Length + portLength
 		if len(buffer) < lengthNeed {
-			return 0, BufferLengthLimitErr
+			return 0, ErrBufferLengthLimit
 		}
 		buffer[lengthUsed] = byte(data.AddressType)
-		lengthUsed += AddressTypeByteLength
+		lengthUsed += addressTypeByteLength
 
-		if len(data.Host) < AddressIpv6Length {
+		if len(data.Host) < addressIpv6Length {
 			return 0, HostLengthLimitedErr
 		}
-		copy(buffer[lengthUsed:lengthUsed+AddressIpv6Length], net.ParseIP(data.Host)[:AddressIpv6Length])
-		lengthUsed += AddressIpv6Length
+		copy(buffer[lengthUsed:lengthUsed+addressIpv6Length], net.ParseIP(data.Host)[:addressIpv6Length])
+		lengthUsed += addressIpv6Length
 
 		binary.BigEndian.PutUint16(buffer[lengthUsed:], data.Port)
 		return lengthNeed, nil
 	case AddressEnumTypeDomain:
 		domainLen := len(data.Host)
-		lengthNeed := TransProtocolTypeLength + AddressTypeByteLength + AddressDomainLength + domainLen + PortLength
+		lengthNeed := transProtocolTypeLength + addressTypeByteLength + addressDomainLength + domainLen + portLength
 		if len(buffer) < (lengthNeed) {
-			return 0, BufferLengthLimitErr
+			return 0, ErrBufferLengthLimit
 		}
 
 		buffer[lengthUsed] = byte(data.AddressType)
-		lengthUsed += AddressTypeByteLength
+		lengthUsed += addressTypeByteLength
 
 		buffer[lengthUsed] = byte(domainLen)
-		lengthUsed += AddressDomainLength
+		lengthUsed += addressDomainLength
 
 		copy(buffer[lengthUsed:lengthUsed+domainLen], data.Host)
 		lengthUsed += domainLen
@@ -175,54 +208,54 @@ func (data *ConnectType) Marshal(buffer []byte) (int, error) {
 }
 
 func (data *ConnectType) UnMarshal(buffer []byte) (int, error) {
-	if len(buffer) < TransProtocolTypeLength {
-		return 0, BufferLengthLimitErr
+	if len(buffer) < transProtocolTypeLength {
+		return 0, ErrBufferLengthLimit
 	}
 
 	data.ProtocolType = TransProtocolType(buffer[0])
-	lengthUsed := TransProtocolTypeLength
-	if len(buffer) < (lengthUsed + AddressTypeByteLength) {
-		return 0, BufferLengthLimitErr
+	lengthUsed := transProtocolTypeLength
+	if len(buffer) < (lengthUsed + addressTypeByteLength) {
+		return 0, ErrBufferLengthLimit
 	}
 
 	data.AddressType = AddressEnumType(buffer[lengthUsed])
-	lengthUsed += AddressTypeByteLength
+	lengthUsed += addressTypeByteLength
 
 	switch data.AddressType {
 	case AddressEnumTypeIpv4:
-		if len(buffer) < (lengthUsed + AddressIpv4Length + PortLength) {
-			return 0, BufferLengthLimitErr
+		if len(buffer) < (lengthUsed + addressIpv4Length + portLength) {
+			return 0, ErrBufferLengthLimit
 		}
 
-		data.Host = net.IP(buffer[lengthUsed : lengthUsed+AddressIpv4Length]).String()
-		lengthUsed += AddressIpv4Length
+		data.Host = net.IP(buffer[lengthUsed : lengthUsed+addressIpv4Length]).String()
+		lengthUsed += addressIpv4Length
 
-		data.Port = binary.BigEndian.Uint16(buffer[lengthUsed : lengthUsed+PortLength])
-		lengthUsed += PortLength
+		data.Port = binary.BigEndian.Uint16(buffer[lengthUsed : lengthUsed+portLength])
+		lengthUsed += portLength
 		return lengthUsed, nil
 	case AddressEnumTypeIpv6:
-		if len(buffer) < (lengthUsed + AddressIpv6Length + PortLength) {
-			return 0, BufferLengthLimitErr
+		if len(buffer) < (lengthUsed + addressIpv6Length + portLength) {
+			return 0, ErrBufferLengthLimit
 		}
 
-		data.Host = net.IP(buffer[lengthUsed : lengthUsed+AddressIpv6Length]).String()
-		lengthUsed += AddressIpv6Length
+		data.Host = net.IP(buffer[lengthUsed : lengthUsed+addressIpv6Length]).String()
+		lengthUsed += addressIpv6Length
 
-		data.Port = binary.BigEndian.Uint16(buffer[lengthUsed : lengthUsed+PortLength])
-		lengthUsed += PortLength
+		data.Port = binary.BigEndian.Uint16(buffer[lengthUsed : lengthUsed+portLength])
+		lengthUsed += portLength
 		return lengthUsed, nil
 	case AddressEnumTypeDomain:
 		domainLen := int(buffer[lengthUsed])
-		lengthUsed += AddressDomainLength
+		lengthUsed += addressDomainLength
 
-		if len(buffer) < (lengthUsed + domainLen + PortLength) {
-			return 0, BufferLengthLimitErr
+		if len(buffer) < (lengthUsed + domainLen + portLength) {
+			return 0, ErrBufferLengthLimit
 		}
 		data.Host = string(buffer[lengthUsed : lengthUsed+domainLen])
 		lengthUsed += domainLen
 
-		data.Port = binary.BigEndian.Uint16(buffer[lengthUsed : lengthUsed+PortLength])
-		lengthUsed += PortLength
+		data.Port = binary.BigEndian.Uint16(buffer[lengthUsed : lengthUsed+portLength])
+		lengthUsed += portLength
 		return lengthUsed, nil
 	default:
 		return 0, errors.New("address type illegal")

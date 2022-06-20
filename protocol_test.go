@@ -9,13 +9,16 @@ func TestAuthType_Marshal(t *testing.T) {
 	defer PutBuffer(buffer)
 
 	auth := AuthType{
-		AccessToken: "helloworldJack",
+		Token: "helloworldJack",
+		FuncFlag: FunctionTagMux,
 	}
 
-	_, err := auth.Marshal(buffer)
+	n, err := auth.Marshal(buffer)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("used length:%d, buffer:%v", n, buffer[:n])
+
 	cmp := AuthType{}
 	_, err = cmp.UnMarshal(buffer)
 	if err != nil {

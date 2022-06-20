@@ -12,8 +12,8 @@ func init() {
 }
 
 const (
-	BufferLength = 16 * 1024
-	DataLimit    = 15 * 1024 // 保留一部分用作 下层协议传输的 header
+	BufferLength = 8 * 1024
+	DataLimit    = 7 * 1024 // 保留一部分用作 下层协议传输的 header
 )
 
 var (
