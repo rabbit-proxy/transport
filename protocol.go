@@ -24,6 +24,7 @@ const (
 type functionFlagType uint8
 const (
 	FunctionTagMux functionFlagType = 0x01 << iota
+	FunctionTagSpeedTest
 )
 
 type AuthType struct {
