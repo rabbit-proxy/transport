@@ -21,18 +21,18 @@ const (
 	functionTagLength           = 1
 )
 
-type functionFlagType uint8
+type FunctionFlagType uint8
 const (
-	FunctionTagMux functionFlagType = 0x01 << iota
+	FunctionTagMux FunctionFlagType = 0x01 << iota
 	FunctionTagSpeedTest
 )
 
 type AuthType struct {
 	Token    string
-	FuncFlag functionFlagType // 功能位，用于标记是否是否启动一定功能
+	FuncFlag FunctionFlagType // 功能位，用于标记是否是否启动一定功能
 }
 
-func (auth *AuthType) SetFuncTag(flag functionFlagType, enabled bool) {
+func (auth *AuthType) SetFuncTag(flag FunctionFlagType, enabled bool) {
 	if enabled {
 		auth.FuncFlag |= flag
 	} else {
@@ -40,7 +40,7 @@ func (auth *AuthType) SetFuncTag(flag functionFlagType, enabled bool) {
 	}
 }
 
-func (auth *AuthType) IsFuncEnabled(flag functionFlagType) bool {
+func (auth *AuthType) IsFuncEnabled(flag FunctionFlagType) bool {
 	return (auth.FuncFlag & flag) > 0
 }
 
@@ -82,7 +82,7 @@ func (auth *AuthType) UnMarshal(buffer []byte) (int, error) {
 	auth.Token = string(buffer[used : used+tokenLen])
 	used += tokenLen
 
-	auth.FuncFlag = functionFlagType(buffer[used])
+	auth.FuncFlag = FunctionFlagType(buffer[used])
 	used += functionTagLength
 
 	return used, nil
