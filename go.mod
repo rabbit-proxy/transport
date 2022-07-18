@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/Jack-Kingdom/go-dsa v0.0.1
-	github.com/gorilla/websocket v1.4.2
 	go.uber.org/zap v1.19.1
 )
 

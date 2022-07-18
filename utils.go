@@ -1,9 +1,8 @@
 package transport
 
 import (
-	"github.com/Jack-Kingdom/go-dsa/buffer"
+	dsaBuffer "github.com/Jack-Kingdom/go-dsa/buffer"
 	"math/rand"
-	"sync"
 	"time"
 )
 
@@ -16,13 +15,6 @@ const (
 	DataLimit    = 7 * 1024 // 保留一部分用作 下层协议传输的 header
 )
 
-var (
-	bufferPool = sync.Pool{
-		New: func() interface{} {
-			return make([]byte, BufferLength)
-		}}
-)
-
 // getRandomBytes 生成一个随机字节
 func getRandomBytes() byte {
 	bin := []byte{0x00}
@@ -31,9 +23,9 @@ func getRandomBytes() byte {
 }
 
 func GetBuffer() []byte {
-	return buffer.Get(BufferLength)
+	return dsaBuffer.Get(BufferLength)
 }
 
 func PutBuffer(buffer []byte) {
-	bufferPool.Put(buffer)
+	dsaBuffer.Put(buffer)
 }
