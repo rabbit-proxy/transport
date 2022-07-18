@@ -60,7 +60,7 @@ func NewConnSocket(conn net.Conn) *ConnSocketType {
 // CryptSocketType 加密连接
 type CryptSocketType struct {
 	socket SocketInterface
-	Encryption
+	crypt  Encryption
 }
 
 func (c *CryptSocketType) Read(ctx context.Context, data []byte) (int, error) {
@@ -68,18 +68,22 @@ func (c *CryptSocketType) Read(ctx context.Context, data []byte) (int, error) {
 	if err != nil {
 		return n, err
 	}
-	c.Decrypt(data[:n])
+	c.crypt.Decrypt(data[:n])
 	return n, nil
 }
 
 func (c *CryptSocketType) Write(ctx context.Context, data []byte) (int, error) {
-	c.Encrypt(data)
+	c.crypt.Encrypt(data)
 	return c.socket.Write(ctx, data)
+}
+
+func (c *CryptSocketType) Close() error {
+	return c.socket.Close()
 }
 
 func NewCryptSocket(socket SocketInterface, encryption Encryption) *CryptSocketType {
 	return &CryptSocketType{
 		socket:     socket,
-		Encryption: encryption,
+		crypt: encryption,
 	}
 }
